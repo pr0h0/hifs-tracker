@@ -43,7 +43,7 @@ export function SurahPicker({ value, onChange }: SurahPickerProps) {
                 {selectedSurah.number}.
               </span>
               {selectedSurah.name}
-              <span className="text-muted-foreground" dir="rtl">
+              <span className="text-muted-foreground font-arabic" dir="rtl">
                 {selectedSurah.nameArabic}
               </span>
             </span>
@@ -78,7 +78,7 @@ export function SurahPicker({ value, onChange }: SurahPickerProps) {
                     {surah.number}.
                   </span>
                   <span className="flex-1">{surah.name}</span>
-                  <span className="text-muted-foreground text-sm" dir="rtl">
+                  <span className="text-muted-foreground text-sm font-arabic" dir="rtl">
                     {surah.nameArabic}
                   </span>
                   <span className="ml-2 text-xs text-muted-foreground">

@@ -1,6 +1,7 @@
 "use server";
 
-import { getDb } from "@/lib/db";
+import { getDb, localDate, type Db } from "@/lib/db";
+import { ayahCoverage, QURAN_AYAHS } from "@/lib/juz-data";
 import { requireAuth } from "@/lib/auth";
 
 export async function getDashboardStats() {
@@ -32,7 +33,7 @@ export async function getDashboardStats() {
     )
     .all(user.id) as Array<{ rating: number; count: number }>;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDate();
   const dueCount = db
     .prepare(
       `SELECT COUNT(*) as count FROM review_items r
@@ -51,8 +52,6 @@ export async function getDashboardStats() {
   const streak = calculateStreak(db, user.id);
 
   // Progress over last 30 days
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const progressData = db
     .prepare(
@@ -61,7 +60,7 @@ export async function getDashboardStats() {
        WHERE user_id = ? AND date >= ?
        ORDER BY date`,
     )
-    .all(user.id, thirtyDaysAgo.toISOString().split("T")[0]) as Array<{
+    .all(user.id, localDate(-29)) as unknown as Array<{
     date: string;
     items_reviewed: number;
     items_added: number;
@@ -85,8 +84,14 @@ export async function getDashboardStats() {
     updated_at: string;
   }>;
 
+  const allItems = db
+    .prepare("SELECT surah_number, ayah_from, ayah_to, status FROM memorization_items WHERE user_id = ?")
+    .all(user.id) as unknown as Parameters<typeof ayahCoverage>[0];
+  const coverage = { ...ayahCoverage(allItems), total: QURAN_AYAHS };
+
   return {
     counts,
+    coverage,
     ratingDistribution,
     reviewsDue: dueCount.count + learningCount.count,
     streak,
@@ -95,42 +100,23 @@ export async function getDashboardStats() {
   };
 }
 
-function calculateStreak(db: ReturnType<typeof getDb>, userId: number): number {
-  const logs = db
-    .prepare(
-      `SELECT date FROM daily_logs
-       WHERE user_id = ? AND (items_reviewed > 0 OR items_added > 0)
-       ORDER BY date DESC`,
-    )
-    .all(userId) as Array<{ date: string }>;
-
-  if (logs.length === 0) return 0;
-
+function calculateStreak(db: Db, userId: number): number {
+  const active = new Set(
+    (
+      db
+        .prepare(
+          `SELECT date FROM daily_logs
+           WHERE user_id = ? AND (items_reviewed > 0 OR items_added > 0)`,
+        )
+        .all(userId) as Array<{ date: string }>
+    ).map((r) => r.date),
+  );
+  // A streak still counts if today isn't done yet but yesterday was.
+  let offset = active.has(localDate()) ? 0 : -1;
   let streak = 0;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  for (let i = 0; i < logs.length; i++) {
-    const logDate = new Date(logs[i].date + "T00:00:00");
-    const expectedDate = new Date(today);
-    expectedDate.setDate(expectedDate.getDate() - i);
-    expectedDate.setHours(0, 0, 0, 0);
-
-    if (logDate.getTime() === expectedDate.getTime()) {
-      streak++;
-    } else if (i === 0 && streak === 0) {
-      // Allow checking from yesterday if today hasn't been logged yet
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      if (logDate.getTime() === yesterday.getTime()) {
-        streak++;
-      } else {
-        break;
-      }
-    } else {
-      break;
-    }
+  while (active.has(localDate(offset))) {
+    streak++;
+    offset--;
   }
-
   return streak;
 }

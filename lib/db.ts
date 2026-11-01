@@ -1,21 +1,69 @@
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import path from "path";
 
 const DB_PATH = path.join(process.cwd(), "hifz-tracker.db");
 
-let db: Database.Database | null = null;
+type Param = null | number | bigint | string;
 
-export function getDb(): Database.Database {
-  if (!db) {
-    db = new Database(DB_PATH);
-    db.pragma("journal_mode = WAL");
-    db.pragma("foreign_keys = ON");
-    initializeDb(db);
-  }
-  return db;
+/**
+ * Thin wrapper over node:sqlite. Rows are copied into plain objects because
+ * node:sqlite returns null-prototype rows, which React can't pass to client components.
+ */
+function wrap(raw: DatabaseSync) {
+  return {
+    exec: (sql: string) => raw.exec(sql),
+    prepare(sql: string) {
+      const st = raw.prepare(sql);
+      return {
+        run: (...p: Param[]) => st.run(...p),
+        get: (...p: Param[]) => {
+          const row = st.get(...p);
+          return row ? { ...row } : undefined;
+        },
+        all: (...p: Param[]) => st.all(...p).map((r) => ({ ...r })),
+      };
+    },
+  };
 }
 
-function initializeDb(db: Database.Database) {
+export type Db = ReturnType<typeof wrap>;
+
+// Survive dev hot-reloads without opening a new connection each time.
+const globalForDb = globalThis as unknown as { hifzDb?: Db };
+
+export function getDb(): Db {
+  if (!globalForDb.hifzDb) {
+    const raw = new DatabaseSync(DB_PATH);
+    raw.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
+    initializeDb(raw);
+    globalForDb.hifzDb = wrap(raw);
+  }
+  return globalForDb.hifzDb;
+}
+
+/** Runs fn inside a transaction; rolls back if it throws. */
+export function transaction<T>(fn: () => T): T {
+  const db = getDb();
+  db.exec("BEGIN");
+  try {
+    const result = fn();
+    db.exec("COMMIT");
+    return result;
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
+}
+
+/** Local calendar date as YYYY-MM-DD (toISOString() would give the UTC date). */
+export function localDate(offsetDays = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function initializeDb(db: DatabaseSync) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,5 +119,34 @@ function initializeDb(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_review_user ON review_items(user_id);
     CREATE INDEX IF NOT EXISTS idx_review_due ON review_items(user_id, due_date);
     CREATE INDEX IF NOT EXISTS idx_daily_user ON daily_logs(user_id, date);
+    CREATE INDEX IF NOT EXISTS idx_review_item ON review_items(item_id);
+
+    DELETE FROM sessions WHERE expires_at <= datetime('now');
   `);
+}
+
+/** Puts a learned item into the SM-2 review pool (no-op if already there). */
+export function ensureReviewEntry(userId: number, itemId: number | bigint) {
+  const db = getDb();
+  const existing = db
+    .prepare("SELECT id FROM review_items WHERE item_id = ? AND user_id = ?")
+    .get(itemId, userId);
+  if (!existing) {
+    db.prepare(
+      `INSERT INTO review_items (user_id, item_id, interval, repetition, efactor, due_date, in_review_pool)
+       VALUES (?, ?, 1, 0, 2.5, ?, 1)`,
+    ).run(userId, itemId, localDate());
+  }
+}
+
+export function logActivity(userId: number, added: number, reviewed: number) {
+  getDb()
+    .prepare(
+      `INSERT INTO daily_logs (user_id, date, items_added, items_reviewed)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(user_id, date) DO UPDATE SET
+         items_added = items_added + excluded.items_added,
+         items_reviewed = items_reviewed + excluded.items_reviewed`,
+    )
+    .run(userId, localDate(), added, reviewed);
 }

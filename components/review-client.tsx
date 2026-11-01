@@ -6,7 +6,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +40,6 @@ import {
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
 
 interface ReviewClientProps {
   initialQueue: ReviewQueueItem[];
@@ -112,7 +110,7 @@ export function ReviewClient({ initialQueue }: ReviewClientProps) {
         setCurrentIndex(0);
         setCompleted(false);
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to update queue");
     }
     setLoading(false);
@@ -194,7 +192,8 @@ export function ReviewClient({ initialQueue }: ReviewClientProps) {
 
       mediaRecorderRef.current.start();
       setIsRecording(true);
-    } catch (err: any) {
+    } catch (e) {
+      const err = e as DOMException;
       console.error("Mic error:", err);
       if (
         err.name === "NotAllowedError" ||
@@ -311,7 +310,7 @@ export function ReviewClient({ initialQueue }: ReviewClientProps) {
             or add new items.
           </p>
 
-          <div className="flex gap-4 mt-6 mb-6 p-4 border rounded-lg bg-card text-card-foreground shadow-sm">
+          <div className="flex gap-4 mt-6 mb-6 p-4 border rounded-lg bg-card text-card-foreground shadow-xs">
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="empty-learning"
@@ -573,7 +572,7 @@ export function ReviewClient({ initialQueue }: ReviewClientProps) {
             </div>
 
             <div className="mt-4 text-center py-6">
-              <p className="text-3xl font-bold" dir="rtl">
+              <p className="font-arabic text-4xl" dir="rtl">
                 {surah?.nameArabic}
               </p>
               <h2 className="text-xl font-semibold mt-2">{surah?.name}</h2>
@@ -592,7 +591,7 @@ export function ReviewClient({ initialQueue }: ReviewClientProps) {
                   <Button
                     variant={audioUrl ? "secondary" : "default"}
                     size="icon"
-                    className="h-12 w-12 rounded-full shadow-sm"
+                    className="h-12 w-12 rounded-full shadow-xs"
                     onClick={startRecording}
                     title="Record Recitation"
                   >
@@ -602,7 +601,7 @@ export function ReviewClient({ initialQueue }: ReviewClientProps) {
                   <Button
                     variant="destructive"
                     size="icon"
-                    className="h-12 w-12 rounded-full animate-pulse shadow-sm"
+                    className="h-12 w-12 rounded-full animate-pulse shadow-xs"
                     onClick={stopRecording}
                     title="Stop Recording"
                   >

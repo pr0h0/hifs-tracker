@@ -36,7 +36,7 @@ export function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
               <h3 className="font-semibold text-sm">
                 {surah?.name ?? `Surah ${item.surah_number}`}
               </h3>
-              <span className="text-sm text-muted-foreground" dir="rtl">
+              <span className="text-sm text-muted-foreground font-arabic" dir="rtl">
                 {surah?.nameArabic}
               </span>
             </div>

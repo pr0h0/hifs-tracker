@@ -35,6 +35,7 @@ interface DashboardStats {
     learning: number;
     planned: number;
   };
+  coverage: { total: number; learned: number; learning: number; planned: number };
   ratingDistribution: Array<{ rating: number; count: number }>;
   reviewsDue: number;
   streak: number;
@@ -65,6 +66,7 @@ const ratingLabels: Record<number, string> = {
 export function DashboardClient({ stats }: { stats: DashboardStats }) {
   const {
     counts,
+    coverage,
     ratingDistribution,
     reviewsDue,
     streak,
@@ -78,14 +80,21 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
     fill: getRatingConfig(rating).fill,
   }));
 
-  const activityData = progressData.map((d) => ({
-    date: new Date(d.date).toLocaleDateString("en", {
-      month: "short",
-      day: "numeric",
-    }),
-    reviewed: d.items_reviewed,
-    added: d.items_added,
-  }));
+  // One point per day for the last 30 days, including days with no activity.
+  const byDate = new Map(progressData.map((d) => [d.date, d]));
+  const activityData = Array.from({ length: 30 }, (_, i) => {
+    const day = new Date();
+    day.setDate(day.getDate() - 29 + i);
+    const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+    return {
+      date: day.toLocaleDateString("en", { month: "short", day: "numeric" }),
+      reviewed: byDate.get(key)?.items_reviewed ?? 0,
+      added: byDate.get(key)?.items_added ?? 0,
+    };
+  });
+
+  const pct = (n: number) => (n / coverage.total) * 100;
+  const learnedPct = pct(coverage.learned);
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -105,6 +114,40 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
           </Button>
         )}
       </div>
+
+      {/* Quran coverage */}
+      <Card className="mb-6 overflow-hidden">
+        <CardContent className="p-5 sm:p-6">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Quran memorized
+              </p>
+              <p className="mt-1 text-4xl font-bold tabular-nums tracking-tight">
+                {learnedPct < 10 ? learnedPct.toFixed(1) : Math.round(learnedPct)}
+                <span className="text-2xl text-muted-foreground">%</span>
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground tabular-nums">
+                {coverage.learned.toLocaleString()} of {coverage.total.toLocaleString()} ayahs
+                {" · "}≈ {((coverage.learned / coverage.total) * 30).toFixed(1)} juz
+              </p>
+            </div>
+            <p className="font-arabic text-2xl text-primary/80" dir="rtl">
+              وَلَقَدْ يَسَّرْنَا الْقُرْآنَ لِلذِّكْرِ
+            </p>
+          </div>
+          <div className="mt-5 flex h-3 overflow-hidden rounded-full bg-muted">
+            <div className="bg-emerald-500 transition-all" style={{ width: `${learnedPct}%` }} />
+            <div className="bg-sky-500" style={{ width: `${pct(coverage.learning)}%` }} />
+            <div className="bg-muted-foreground/30" style={{ width: `${pct(coverage.planned)}%` }} />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground tabular-nums">
+            <span className="flex items-center gap-1.5"><i className="size-2 rounded-full bg-emerald-500" />Learned {coverage.learned}</span>
+            <span className="flex items-center gap-1.5"><i className="size-2 rounded-full bg-sky-500" />Learning {coverage.learning}</span>
+            <span className="flex items-center gap-1.5"><i className="size-2 rounded-full bg-muted-foreground/40" />Planned {coverage.planned}</span>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
@@ -287,7 +330,7 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
                         <p className="text-sm font-medium">
                           {surah?.name}
                           <span
-                            className="text-muted-foreground ml-1.5 text-xs"
+                            className="font-arabic ml-1.5 text-sm text-muted-foreground"
                             dir="rtl"
                           >
                             {surah?.nameArabic}

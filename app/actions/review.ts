@@ -1,6 +1,6 @@
 "use server";
 
-import { getDb } from "@/lib/db";
+import { ensureReviewEntry, getDb, localDate, logActivity } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import {
   calculateSM2,
@@ -8,7 +8,7 @@ import {
   type ReviewQueueItem,
 } from "@/lib/sm2";
 import { revalidatePath } from "next/cache";
-import { getSurahsByJuz } from "@/lib/quran-data";
+import { juzSqlFilter } from "@/lib/juz-data";
 
 export async function getDailyReviewQueue(
   includeLearning = true,
@@ -18,23 +18,14 @@ export async function getDailyReviewQueue(
 ): Promise<ReviewQueueItem[]> {
   const user = await requireAuth();
   const db = getDb();
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDate();
 
   const queue: ReviewQueueItem[] = [];
 
-  let surahFilter = "";
-  let surahParams: number[] = [];
-
-  if (juz) {
-    const surahs = getSurahsByJuz(juz);
-    if (surahs.length > 0) {
-      const numbers = surahs.map((s) => s.number);
-      surahFilter = ` AND m.surah_number IN (${numbers.map(() => "?").join(",")})`;
-      surahParams = numbers;
-    } else {
-      return [];
-    }
-  }
+  // Juz review only includes items that actually overlap that juz's ayahs.
+  const { sql: surahFilter, params: surahParams } = juz
+    ? juzSqlFilter(juz)
+    : { sql: "", params: [] as number[] };
 
   // Tier 1: "learning" items (repeat daily, no SM-2)
   if (includeLearning) {
@@ -194,8 +185,10 @@ export async function getDailyReviewQueue(
 
 export async function submitReview(itemId: number, quality: number) {
   const user = await requireAuth();
+  if (!Number.isInteger(quality) || quality < 1 || quality > 5)
+    return { error: "Invalid rating" };
   const db = getDb();
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDate();
 
   // Get the memorization item
   const item = db
@@ -208,8 +201,8 @@ export async function submitReview(itemId: number, quality: number) {
 
   // Update the item's rating
   db.prepare(
-    "UPDATE memorization_items SET rating = ?, updated_at = datetime('now') WHERE id = ?",
-  ).run(quality, itemId);
+    "UPDATE memorization_items SET rating = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?",
+  ).run(quality, itemId, user.id);
 
   // If item is "learned", update SM-2 scheduling
   if (item.status === "learned") {
@@ -232,8 +225,6 @@ export async function submitReview(itemId: number, quality: number) {
         reviewItem.efactor,
       );
 
-      const nextDueDate = new Date();
-      nextDueDate.setDate(nextDueDate.getDate() + result.interval);
 
       db.prepare(
         `UPDATE review_items
@@ -243,19 +234,14 @@ export async function submitReview(itemId: number, quality: number) {
         result.interval,
         result.repetition,
         result.efactor,
-        nextDueDate.toISOString().split("T")[0],
+        localDate(result.interval),
         today,
         reviewItem.id,
       );
     }
   }
 
-  // Log the review
-  db.prepare(
-    `INSERT INTO daily_logs (user_id, date, items_reviewed, items_added)
-     VALUES (?, ?, 1, 0)
-     ON CONFLICT(user_id, date) DO UPDATE SET items_reviewed = items_reviewed + 1`,
-  ).run(user.id, today);
+  logActivity(user.id, 0, 1);
 
   revalidatePath("/review");
   revalidatePath("/");
@@ -267,24 +253,12 @@ export async function submitReview(itemId: number, quality: number) {
 
 export async function promoteToLearned(itemId: number) {
   const user = await requireAuth();
-  const db = getDb();
-  const today = new Date().toISOString().split("T")[0];
-
-  db.prepare(
-    "UPDATE memorization_items SET status = 'learned', updated_at = datetime('now') WHERE id = ? AND user_id = ?",
-  ).run(itemId, user.id);
-
-  // Create review_items entry
-  const existing = db
-    .prepare("SELECT id FROM review_items WHERE item_id = ? AND user_id = ?")
-    .get(itemId, user.id);
-
-  if (!existing) {
-    db.prepare(
-      `INSERT INTO review_items (user_id, item_id, interval, repetition, efactor, due_date, in_review_pool)
-       VALUES (?, ?, 1, 0, 2.5, ?, 1)`,
-    ).run(user.id, itemId, today);
-  }
+  const { changes } = getDb()
+    .prepare(
+      "UPDATE memorization_items SET status = 'learned', updated_at = datetime('now') WHERE id = ? AND user_id = ?",
+    )
+    .run(itemId, user.id);
+  if (changes) ensureReviewEntry(user.id, itemId);
 
   revalidatePath("/review");
   revalidatePath("/items");

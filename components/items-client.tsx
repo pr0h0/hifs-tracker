@@ -22,7 +22,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { JUZ_LIST, SURAHS } from "@/lib/quran-data";
+import { JUZ_LIST } from "@/lib/quran-data";
+import { juzOfRange } from "@/lib/juz-data";
 import { toast } from "sonner";
 import { BookOpenText } from "lucide-react";
 
@@ -42,10 +43,7 @@ export function ItemsClient({ initialItems }: ItemsClientProps) {
 
     if (juzFilter !== "all") {
       const juzNumber = parseInt(juzFilter);
-      const surahsInJuz = SURAHS.filter((s) => s.juz.includes(juzNumber)).map(
-        (s) => s.number,
-      );
-      filtered = filtered.filter((i) => surahsInJuz.includes(i.surah_number));
+      filtered = filtered.filter((i) => juzOfRange(i).includes(juzNumber));
     }
 
     return filtered;
@@ -72,7 +70,7 @@ export function ItemsClient({ initialItems }: ItemsClientProps) {
   const plannedItems = getFilteredItems("planned");
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto min-w-0 max-w-5xl">
       <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
         <div>
           <h1 className="text-2xl font-bold text-balance">My Items</h1>
@@ -99,7 +97,7 @@ export function ItemsClient({ initialItems }: ItemsClientProps) {
       </div>
 
       <Tabs defaultValue="all">
-        <TabsList className="mb-4">
+        <TabsList className="mb-4 w-full justify-start overflow-x-auto sm:w-auto">
           <TabsTrigger value="all">All ({allItems.length})</TabsTrigger>
           <TabsTrigger value="learned">
             Learned ({learnedItems.length})

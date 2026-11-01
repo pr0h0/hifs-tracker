@@ -16,11 +16,12 @@ export default async function AppLayout({
   return (
     <SidebarProvider>
       <AppSidebar userName={user.name} />
-      <SidebarInset>
-        <header className="flex h-14 items-center gap-2 border-b px-4">
+      <SidebarInset className="min-w-0">
+        <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur md:hidden">
           <SidebarTrigger />
+          <span className="font-semibold">Hifz Tracker</span>
         </header>
-        <div className="flex-1 overflow-auto p-4 md:p-6">{children}</div>
+        <div className="flex-1 p-4 md:p-8">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );

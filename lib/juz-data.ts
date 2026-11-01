@@ -281,3 +281,80 @@ export const JUZ_SEGMENTS = [
     ],
   },
 ];
+
+export interface AyahRange {
+  surah_number: number;
+  ayah_from: number;
+  ayah_to: number;
+}
+
+export interface Coverage {
+  total: number;
+  learned: number;
+  learning: number;
+  planned: number;
+}
+
+const SEGMENTS_BY_JUZ = new Map(JUZ_SEGMENTS.map((j) => [j.juzNumber, j.segments]));
+
+export const QURAN_AYAHS = JUZ_SEGMENTS.reduce(
+  (sum, j) => sum + j.segments.reduce((s, g) => s + g.endAyah - g.startAyah + 1, 0),
+  0,
+);
+
+/** Juz numbers an ayah range touches. */
+export function juzOfRange(r: AyahRange): number[] {
+  return JUZ_SEGMENTS.filter((j) =>
+    j.segments.some(
+      (g) => g.surah === r.surah_number && r.ayah_from <= g.endAyah && r.ayah_to >= g.startAyah,
+    ),
+  ).map((j) => j.juzNumber);
+}
+
+/** SQL condition (on alias m) matching items that overlap a juz. */
+export function juzSqlFilter(juz: number): { sql: string; params: number[] } {
+  const segs = SEGMENTS_BY_JUZ.get(juz) ?? [];
+  if (segs.length === 0) return { sql: " AND 0", params: [] };
+  return {
+    sql: ` AND (${segs.map(() => "(m.surah_number = ? AND m.ayah_to >= ? AND m.ayah_from <= ?)").join(" OR ")})`,
+    params: segs.flatMap((g) => [g.surah, g.startAyah, g.endAyah]),
+  };
+}
+
+const RANK = { learned: 3, learning: 2, planned: 1 } as const;
+
+/**
+ * Counts distinct ayahs by best status (learned > learning > planned),
+ * for one juz or the whole Quran. Overlapping items are not double counted.
+ */
+export function ayahCoverage(
+  items: (AyahRange & { status: string })[],
+  juz?: number,
+): Coverage {
+  const segs = juz ? (SEGMENTS_BY_JUZ.get(juz) ?? []) : JUZ_SEGMENTS.flatMap((j) => j.segments);
+  const best = new Map<string, number>();
+  for (const it of items) {
+    const rank = RANK[it.status as keyof typeof RANK] ?? 0;
+    for (const g of segs) {
+      if (g.surah !== it.surah_number) continue;
+      const from = Math.max(g.startAyah, it.ayah_from);
+      const to = Math.min(g.endAyah, it.ayah_to);
+      for (let a = from; a <= to; a++) {
+        const key = `${g.surah}:${a}`;
+        if ((best.get(key) ?? 0) < rank) best.set(key, rank);
+      }
+    }
+  }
+  const c: Coverage = {
+    total: segs.reduce((s, g) => s + g.endAyah - g.startAyah + 1, 0),
+    learned: 0,
+    learning: 0,
+    planned: 0,
+  };
+  for (const r of best.values()) {
+    if (r === 3) c.learned++;
+    else if (r === 2) c.learning++;
+    else if (r === 1) c.planned++;
+  }
+  return c;
+}

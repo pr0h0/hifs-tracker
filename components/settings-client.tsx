@@ -100,8 +100,9 @@ export function SettingsClient({ user }: SettingsClientProps) {
         setImportLoading(false);
         return;
       }
-      await importData(data);
-      toast.success(`Imported ${data.items.length} items`);
+      const result = await importData(data);
+      if (result.error) toast.error(result.error);
+      else toast.success(`Imported ${result.count} items`);
     } catch {
       toast.error("Failed to import data");
     }
@@ -216,7 +217,7 @@ export function SettingsClient({ user }: SettingsClientProps) {
                   name="new_password"
                   type="password"
                   required
-                  minLength={6}
+                  minLength={8}
                   autoComplete="new-password"
                 />
               </div>

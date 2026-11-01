@@ -73,9 +73,9 @@ export function RegisterForm() {
               id="password"
               name="password"
               type="password"
-              placeholder="Minimum 6 characters"
+              placeholder="Minimum 8 characters"
               required
-              minLength={6}
+              minLength={8}
               autoComplete="new-password"
             />
           </div>

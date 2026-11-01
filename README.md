@@ -10,14 +10,15 @@ A modern, efficient tool designed to help you track your Quran memorization (Hif
   - **Daily Log**: Items due for review today.
   - **Learning**: New items you are currently memorizing.
   - **Juz Review**: Focus on specific Juz when you want to strengthen a particular section.
-- **Detailed Analytics**: Track your retention rates and memorization velocity (coming soon).
+- **Quran Coverage**: See exactly how many of the 6,236 ayahs you've memorized, overall and per Juz.
+- **Backup & Restore**: Export to JSON and import again, including your spaced-repetition schedule.
 - **Offline-First**: Uses a local SQLite database for fast, private, and reliable data storage.
 
 ## 🚀 Tech Stack
 
 - **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
-- **Database**: SQLite (via `better-sqlite3`)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Database**: SQLite (Node's built-in `node:sqlite`, no native build step)
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
 - **UI Components**: [shadcn/ui](https://ui.shadcn.com/)
 - **Runtime**: Bun / Node.js
 
@@ -25,7 +26,7 @@ A modern, efficient tool designed to help you track your Quran memorization (Hif
 
 ### Prerequisites
 
-Make sure you have [Bun](https://bun.sh/) installed (or Node.js + npm/pnpm).
+Node.js **22.13 or newer** (the app uses the built-in `node:sqlite` module). [Bun](https://bun.sh/) works as the package manager.
 
 ### Installation
 
@@ -70,6 +71,7 @@ bun start
 
 - `bun run check-types`: Run TypeScript compiler to check for type errors.
 - `bun run lint`: Run ESLint to check for code style issues.
+- `bun run test`: Run the Juz/ayah coverage self-check.
 
 ## 📖 How to Use
 

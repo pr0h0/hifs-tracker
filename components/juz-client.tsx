@@ -5,13 +5,12 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { SURAHS, JUZ_LIST, getSurahsByJuz } from "@/lib/quran-data";
 import { getRatingConfig, getStatusConfig } from "@/lib/rating-colors";
+import { ayahCoverage, juzOfRange, type Coverage } from "@/lib/juz-data";
 import { cn } from "@/lib/utils";
 import type { MemorizationItem } from "@/app/actions/items";
 import {
-  Grid3X3,
   ChevronDown,
   ChevronRight,
   BookOpenText,
@@ -22,40 +21,25 @@ interface JuzClientProps {
   allItems: MemorizationItem[];
 }
 
-interface JuzStats {
+interface JuzStats extends Coverage {
   juz: number;
   totalSurahs: number;
   totalItems: number;
-  learned: number;
-  learning: number;
-  planned: number;
-  avgRating: number | null;
+  pct: number;
 }
 
 export function JuzClient({ allItems }: JuzClientProps) {
   const [expandedJuz, setExpandedJuz] = useState<number | null>(null);
 
+  // Progress is measured in ayahs actually covered, not in item counts.
   const juzStats: JuzStats[] = JUZ_LIST.map((juz) => {
-    const surahsInJuz = getSurahsByJuz(juz);
-    const surahNumbers = surahsInJuz.map((s) => s.number);
-    const juzItems = allItems.filter((i) =>
-      surahNumbers.includes(i.surah_number),
-    );
-    const ratings = juzItems
-      .filter((i) => i.rating !== null)
-      .map((i) => i.rating!);
-
+    const c = ayahCoverage(allItems, juz);
     return {
+      ...c,
       juz,
-      totalSurahs: surahsInJuz.length,
-      totalItems: juzItems.length,
-      learned: juzItems.filter((i) => i.status === "learned").length,
-      learning: juzItems.filter((i) => i.status === "learning").length,
-      planned: juzItems.filter((i) => i.status === "planned").length,
-      avgRating:
-        ratings.length > 0
-          ? ratings.reduce((a, b) => a + b, 0) / ratings.length
-          : null,
+      totalSurahs: getSurahsByJuz(juz).length,
+      totalItems: allItems.filter((i) => juzOfRange(i).includes(juz)).length,
+      pct: Math.round((c.learned / c.total) * 100),
     };
   });
 
@@ -71,12 +55,11 @@ export function JuzClient({ allItems }: JuzClientProps) {
 
   function getJuzColor(stats: JuzStats) {
     if (stats.totalItems === 0) return "bg-muted";
-    const ratio = stats.learned / Math.max(stats.totalItems, 1);
-    if (ratio >= 0.8) return "bg-emerald-500/15 border-emerald-500/30";
-    if (ratio >= 0.5) return "bg-sky-500/15 border-sky-500/30";
-    if (ratio >= 0.2) return "bg-amber-500/15 border-amber-500/30";
-    if (stats.totalItems > 0) return "bg-orange-500/15 border-orange-500/30";
-    return "bg-muted";
+    if (stats.pct >= 100) return "bg-gold/25 border-gold/50";
+    if (stats.pct >= 80) return "bg-emerald-500/15 border-emerald-500/30";
+    if (stats.pct >= 50) return "bg-sky-500/15 border-sky-500/30";
+    if (stats.pct >= 20) return "bg-amber-500/15 border-amber-500/30";
+    return "bg-orange-500/15 border-orange-500/30";
   }
 
   return (
@@ -102,9 +85,7 @@ export function JuzClient({ allItems }: JuzClientProps) {
           >
             <span className="text-lg font-bold">{stats.juz}</span>
             <span className="text-[10px] text-muted-foreground">
-              {stats.totalItems > 0
-                ? `${stats.learned}/${stats.totalItems}`
-                : "--"}
+              {stats.totalItems > 0 ? `${stats.pct}%` : "--"}
             </span>
           </button>
         ))}
@@ -113,23 +94,27 @@ export function JuzClient({ allItems }: JuzClientProps) {
       {/* Legend */}
       <div className="flex flex-wrap gap-3 mb-6 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
-          <div className="h-3 w-3 rounded bg-emerald-500/15 border border-emerald-500/30" />
-          <span>{"80%+"} learned</span>
+          <div className="h-3 w-3 rounded-sm bg-gold/25 border border-gold/50" />
+          <span>Complete</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="h-3 w-3 rounded bg-sky-500/15 border border-sky-500/30" />
+          <div className="h-3 w-3 rounded-sm bg-emerald-500/15 border border-emerald-500/30" />
+          <span>80%+ ayahs learned</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="h-3 w-3 rounded-sm bg-sky-500/15 border border-sky-500/30" />
           <span>{"50%+"} learned</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="h-3 w-3 rounded bg-amber-500/15 border border-amber-500/30" />
+          <div className="h-3 w-3 rounded-sm bg-amber-500/15 border border-amber-500/30" />
           <span>{"20%+"} learned</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="h-3 w-3 rounded bg-orange-500/15 border border-orange-500/30" />
+          <div className="h-3 w-3 rounded-sm bg-orange-500/15 border border-orange-500/30" />
           <span>{"< 20%"} learned</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="h-3 w-3 rounded bg-muted border" />
+          <div className="h-3 w-3 rounded-sm bg-muted border" />
           <span>No items</span>
         </div>
       </div>
@@ -140,7 +125,7 @@ export function JuzClient({ allItems }: JuzClientProps) {
           const isExpanded = expandedJuz === stats.juz;
           const surahsInJuz = getSurahsByJuz(stats.juz);
           const juzItems = allItems.filter((i) =>
-            surahsInJuz.map((s) => s.number).includes(i.surah_number),
+            juzOfRange(i).includes(stats.juz),
           );
 
           return (
@@ -170,8 +155,8 @@ export function JuzClient({ allItems }: JuzClientProps) {
                       <p className="text-sm font-semibold">Juz {stats.juz}</p>
                       <div className="flex items-center gap-2">
                         {stats.totalItems > 0 && (
-                          <span className="text-xs text-muted-foreground">
-                            {stats.learned}/{stats.totalItems} learned
+                          <span className="text-xs tabular-nums text-muted-foreground">
+                            {stats.learned}/{stats.total} ayahs · {stats.pct}%
                           </span>
                         )}
                         {isExpanded ? (
@@ -190,12 +175,11 @@ export function JuzClient({ allItems }: JuzClientProps) {
                       </p>
                     </div>
                     {stats.totalItems > 0 && (
-                      <Progress
-                        value={
-                          (stats.learned / Math.max(stats.totalItems, 1)) * 100
-                        }
-                        className="h-1.5 mt-2"
-                      />
+                      <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div className="bg-emerald-500" style={{ width: `${(stats.learned / stats.total) * 100}%` }} />
+                        <div className="bg-sky-500" style={{ width: `${(stats.learning / stats.total) * 100}%` }} />
+                        <div className="bg-muted-foreground/30" style={{ width: `${(stats.planned / stats.total) * 100}%` }} />
+                      </div>
                     )}
                   </div>
                 </CardContent>
@@ -254,7 +238,7 @@ export function JuzClient({ allItems }: JuzClientProps) {
                                 <p className="text-sm font-medium">
                                   {surah?.name}
                                   <span
-                                    className="text-muted-foreground ml-1.5 text-xs"
+                                    className="font-arabic ml-1.5 text-sm text-muted-foreground"
                                     dir="rtl"
                                   >
                                     {surah?.nameArabic}
@@ -282,7 +266,7 @@ export function JuzClient({ allItems }: JuzClientProps) {
                               {item.rating && (
                                 <span
                                   className={cn(
-                                    "text-xs font-medium px-1.5 py-0.5 rounded",
+                                    "text-xs font-medium px-1.5 py-0.5 rounded-sm",
                                     ratingConfig.bg,
                                     ratingConfig.text,
                                   )}

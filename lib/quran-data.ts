@@ -917,7 +917,7 @@ export const SURAHS: Surah[] = [
     name: "An-Nas",
     nameArabic: "الناس",
     totalAyahs: 6,
-    revelationType: "Medinan",
+    revelationType: "Meccan",
     juz: [30],
   },
 ];
