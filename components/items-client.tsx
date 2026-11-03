@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ItemCard } from "@/components/item-card";
 import { AddItemDialog } from "@/components/add-item-dialog";
-import { deleteItem, type MemorizationItem } from "@/app/actions/items";
+import { deleteItem, type MemorizationItem } from "@/lib/api";
 import {
   Select,
   SelectContent,

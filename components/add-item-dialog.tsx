@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { SurahPicker } from "@/components/surah-picker";
 import { RatingStars } from "@/components/rating-stars";
-import { addItem, updateItem } from "@/app/actions/items";
+import { addItem, updateItem } from "@/lib/api";
 import { getSurahByNumber } from "@/lib/quran-data";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";

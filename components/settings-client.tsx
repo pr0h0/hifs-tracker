@@ -12,8 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { updateProfile, exportData, importData } from "@/app/actions/settings";
-import { seedJuz } from "@/app/actions/seed";
+import { updateProfile, exportData, importData, seedJuz } from "@/lib/api";
 import { toast } from "sonner";
 import { Download, Upload, User, Lock, FileJson, BookOpen } from "lucide-react";
 import {

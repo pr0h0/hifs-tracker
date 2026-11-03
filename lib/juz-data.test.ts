@@ -15,5 +15,5 @@ const c = ayahCoverage(
 );
 assert.deepEqual(c, { total: 148, learned: 16, learning: 4, planned: 0 });
 assert.equal(ayahCoverage([{ surah_number: 2, ayah_from: 1, ayah_to: 10, status: "learned" }], 2).learned, 0);
-assert.deepEqual(juzSqlFilter(30).params.slice(0, 3), [78, 1, 40]);
+assert.deepEqual(JSON.parse(juzSqlFilter(30).params[0]).slice(0, 1), [[78, 1, 40]]);
 console.log("juz-data ok");

@@ -1,7 +1,10 @@
-import { requireAuth } from "@/lib/auth";
-import { SettingsClient } from "@/components/settings-client";
+"use client";
 
-export default async function SettingsPage() {
-  const user = await requireAuth();
-  return <SettingsClient user={user} />;
+import { useApi, type User } from "@/lib/api";
+import { SettingsClient } from "@/components/settings-client";
+import { PageLoader } from "@/components/page-loader";
+
+export default function SettingsPage() {
+  const { data, error } = useApi<User>("me");
+  return data ? <SettingsClient user={data} /> : <PageLoader error={error} />;
 }

@@ -1,8 +1,10 @@
-import { getItems } from "@/app/actions/items";
+"use client";
+
+import { useApi, type MemorizationItem } from "@/lib/api";
 import { ItemsClient } from "@/components/items-client";
+import { PageLoader } from "@/components/page-loader";
 
-export default async function ItemsPage() {
-  const items = await getItems();
-
-  return <ItemsClient initialItems={items} />;
+export default function ItemsPage() {
+  const { data, error } = useApi<MemorizationItem[]>("getItems");
+  return data ? <ItemsClient initialItems={data} /> : <PageLoader error={error} />;
 }

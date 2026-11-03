@@ -3,9 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "mkdir -p out && (npx -y wrangler@4.156.2 pages dev out --port 8788 & next dev)",
     "build": "next build",
-    "start": "next start",
+    "deploy": "next build && npx -y wrangler@4.156.2 pages deploy out --project-name hifz-tracker --branch master",
+    "db:local": "npx -y wrangler@4.156.2 d1 execute hifz-tracker --local --file schema.sql",
+    "db:remote": "npx -y wrangler@4.156.2 d1 execute hifz-tracker --remote --file schema.sql",
     "lint": "eslint",
     "check-types": "tsc --noEmit",
     "test": "node --test \"lib/*.test.ts\""
@@ -23,7 +25,6 @@
     "@radix-ui/react-slot": "^1.5.0",
     "@radix-ui/react-tabs": "^1.2.1",
     "@radix-ui/react-tooltip": "^1.4.1",
-    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -49,6 +50,6 @@
     "typescript": "^6"
   },
   "engines": {
-    "node": ">=22.13"
+    "node": ">=20.9"
   }
 }

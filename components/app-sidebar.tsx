@@ -28,7 +28,7 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { logout } from "@/app/actions/auth";
+import { logout } from "@/lib/api";
 
 const navItems = [
   { title: "Dashboard", href: "/", icon: LayoutDashboard },

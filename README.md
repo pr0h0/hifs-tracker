@@ -12,70 +12,47 @@ A modern, efficient tool designed to help you track your Quran memorization (Hif
   - **Juz Review**: Focus on specific Juz when you want to strengthen a particular section.
 - **Quran Coverage**: See exactly how many of the 6,236 ayahs you've memorized, overall and per Juz.
 - **Backup & Restore**: Export to JSON and import again, including your spaced-repetition schedule.
-- **Offline-First**: Uses a local SQLite database for fast, private, and reliable data storage.
+- **Accounts & Sync**: Sign in from any device; progress is stored in Cloudflare D1.
+
+Live: https://hifz-tracker.pages.dev
 
 ## 🚀 Tech Stack
 
-- **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
-- **Database**: SQLite (Node's built-in `node:sqlite`, no native build step)
-- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
-- **UI Components**: [shadcn/ui](https://ui.shadcn.com/)
-- **Runtime**: Bun / Node.js
+- **Frontend**: [Next.js 16](https://nextjs.org/) static export, [Tailwind CSS 4](https://tailwindcss.com/), [shadcn/ui](https://ui.shadcn.com/)
+- **API**: one Cloudflare Pages Function (`functions/api/[[path]].ts`, handlers in `server/`)
+- **Database**: Cloudflare D1 (SQLite), schema in `schema.sql`
+- **Auth**: PBKDF2-SHA256 passwords, hashed session tokens in an HttpOnly cookie, D1-backed login throttle
 
 ## 🛠️ Getting Started
 
-### Prerequisites
-
-Node.js **22.13 or newer** (the app uses the built-in `node:sqlite` module). [Bun](https://bun.sh/) works as the package manager.
-
-### Installation
-
-1.  Clone the repository:
-
-    ```bash
-    git clone https://github.com/pr0h0/hifs-tracker.git
-    cd hifs-tracker
-    ```
-
-2.  Install dependencies:
-
-    ```bash
-    bun install
-    # or
-    npm install
-    ```
-
-3.  Initialize the database:
-    The app will automatically create the `hifz-tracker.db` SQLite database on the first run.
-
-### Running the App
-
-Start the development server:
+Needs [Bun](https://bun.sh/) (or npm) and Node.js 20.9+.
 
 ```bash
-bun dev
+bun install
+bun run db:local   # create the local D1 schema (once)
+bun run dev        # http://localhost:3000; next dev proxies /api to wrangler pages dev on :8788
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+To test the production build locally: `bun run build && npx wrangler pages dev out`.
 
-### Build for Production
+### Deploy
 
-To create a production build:
+Needs `CLOUDFLARE_API_TOKEN` (and `CLOUDFLARE_ACCOUNT_ID`) in the environment.
 
 ```bash
-bun run build
-bun start
+bun run db:remote  # apply schema.sql to the remote D1 (safe to re-run)
+bun run deploy     # build + wrangler pages deploy
 ```
 
 ### Development Commands
 
 - `bun run check-types`: Run TypeScript compiler to check for type errors.
 - `bun run lint`: Run ESLint to check for code style issues.
-- `bun run test`: Run the Juz/ayah coverage self-check.
+- `bun run test`: Run the Juz/ayah coverage and SM-2 self-checks.
 
 ## 📖 How to Use
 
-1.  **Register/Login**: Create a local account to secure your data.
+1.  **Register/Login**: Create an account; your data syncs across devices.
 2.  **Add Items**: Go to "My Items" and add the Surahs/Ayahs you have memorized or are currently learning.
 3.  **Daily Review**: Visit the "Daily Review" page every day. The app will present items due for review based on your past performance.
     - Rate your recall: **Again** (Forgot), **Hard**, **Good**, or **Easy**.

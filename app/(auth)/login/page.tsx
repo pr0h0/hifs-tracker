@@ -1,10 +1,13 @@
+"use client";
+
+import { useEffect } from "react";
+import { call } from "@/lib/api";
 import { LoginForm } from "@/components/login-form";
-import { getSession } from "@/lib/auth";
-import { redirect } from "next/navigation";
 
-export default async function LoginPage() {
-  const user = await getSession();
-  if (user) redirect("/");
-
+export default function LoginPage() {
+  // Already signed in? Go straight to the app.
+  useEffect(() => {
+    call("me").then(() => location.replace("/"), () => {});
+  }, []);
   return <LoginForm />;
 }

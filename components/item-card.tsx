@@ -15,7 +15,7 @@ import { getSurahByNumber } from "@/lib/quran-data";
 import { getStatusConfig } from "@/lib/rating-colors";
 import { cn } from "@/lib/utils";
 import { MoreVertical, Pencil, Trash2, StickyNote } from "lucide-react";
-import type { MemorizationItem } from "@/app/actions/items";
+import type { MemorizationItem } from "@/lib/api";
 
 interface ItemCardProps {
   item: MemorizationItem;

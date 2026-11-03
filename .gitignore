@@ -14,3 +14,7 @@ node_modules/
 *.db-wal
 
 *.tsbuildinfo
+
+# Cloudflare
+.wrangler/
+/out/

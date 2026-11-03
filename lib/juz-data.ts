@@ -312,12 +312,14 @@ export function juzOfRange(r: AyahRange): number[] {
 }
 
 /** SQL condition (on alias m) matching items that overlap a juz. */
-export function juzSqlFilter(juz: number): { sql: string; params: number[] } {
+export function juzSqlFilter(juz: number): { sql: string; params: string[] } {
   const segs = SEGMENTS_BY_JUZ.get(juz) ?? [];
   if (segs.length === 0) return { sql: " AND 0", params: [] };
+  // One JSON parameter: juz 30 has 37 segments, more than D1's 100-parameter limit allows inline.
   return {
-    sql: ` AND (${segs.map(() => "(m.surah_number = ? AND m.ayah_to >= ? AND m.ayah_from <= ?)").join(" OR ")})`,
-    params: segs.flatMap((g) => [g.surah, g.startAyah, g.endAyah]),
+    sql: ` AND EXISTS (SELECT 1 FROM json_each(?) j WHERE m.surah_number = j.value ->> '$[0]'
+             AND m.ayah_to >= j.value ->> '$[1]' AND m.ayah_from <= j.value ->> '$[2]')`,
+    params: [JSON.stringify(segs.map((g) => [g.surah, g.startAyah, g.endAyah]))],
   };
 }
 

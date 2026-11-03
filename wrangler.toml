@@ -1,0 +1,9 @@
+# Cloudflare Pages: static out/ + functions/api on D1. Deploy: bun run deploy
+name = "hifz-tracker"
+pages_build_output_dir = "out"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hifz-tracker"
+database_id = "47e469f3-fd16-46b0-91e2-5fe9f45d5a9b"

@@ -18,7 +18,7 @@ import {
   submitReview,
   promoteToLearned,
   getDailyReviewQueue,
-} from "@/app/actions/review";
+} from "@/lib/api";
 import { getSurahByNumber } from "@/lib/quran-data";
 import { getStatusConfig, getRatingConfig } from "@/lib/rating-colors";
 import { cn } from "@/lib/utils";

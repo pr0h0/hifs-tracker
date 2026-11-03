@@ -1,8 +1,10 @@
-import { getDashboardStats } from "@/app/actions/daily-log";
+"use client";
+
+import { useApi, type DashboardStats } from "@/lib/api";
 import { DashboardClient } from "@/components/dashboard-client";
+import { PageLoader } from "@/components/page-loader";
 
-export default async function DashboardPage() {
-  const stats = await getDashboardStats();
-
-  return <DashboardClient stats={stats} />;
+export default function DashboardPage() {
+  const { data, error } = useApi<DashboardStats>("getDashboardStats");
+  return data ? <DashboardClient stats={data} /> : <PageLoader error={error} />;
 }

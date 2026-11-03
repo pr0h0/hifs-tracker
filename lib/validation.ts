@@ -25,8 +25,8 @@ export const itemSchema = z
 
 export type ItemInput = z.infer<typeof itemSchema>;
 
-export function parseItemForm(formData: FormData) {
-  const r = itemSchema.safeParse(Object.fromEntries(formData));
+export function parseItem(input: unknown) {
+  const r = itemSchema.safeParse(input);
   return r.success
     ? { data: r.data }
     : { error: r.error.issues[0]?.message ?? "Invalid item" };

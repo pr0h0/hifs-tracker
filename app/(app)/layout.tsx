@@ -1,17 +1,22 @@
-import { requireAuth } from "@/lib/auth";
+"use client";
+
+import { useApi, type User } from "@/lib/api";
 import { AppSidebar } from "@/components/app-sidebar";
+import { PageLoader } from "@/components/page-loader";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 
-export default async function AppLayout({
+export default function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requireAuth();
+  // A 401 here sends the browser to /login (see lib/api.ts).
+  const { data: user } = useApi<User>("me");
+  if (!user) return <PageLoader />;
 
   return (
     <SidebarProvider>

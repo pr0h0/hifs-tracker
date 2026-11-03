@@ -1,7 +1,10 @@
-import { getItems } from "@/app/actions/items";
-import { JuzClient } from "@/components/juz-client";
+"use client";
 
-export default async function JuzPage() {
-  const items = await getItems();
-  return <JuzClient allItems={items} />;
+import { useApi, type MemorizationItem } from "@/lib/api";
+import { JuzClient } from "@/components/juz-client";
+import { PageLoader } from "@/components/page-loader";
+
+export default function JuzPage() {
+  const { data, error } = useApi<MemorizationItem[]>("getItems");
+  return data ? <JuzClient allItems={data} /> : <PageLoader error={error} />;
 }

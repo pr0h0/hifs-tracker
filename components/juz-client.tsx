@@ -9,7 +9,7 @@ import { SURAHS, JUZ_LIST, getSurahsByJuz } from "@/lib/quran-data";
 import { getRatingConfig, getStatusConfig } from "@/lib/rating-colors";
 import { ayahCoverage, juzOfRange, type Coverage } from "@/lib/juz-data";
 import { cn } from "@/lib/utils";
-import type { MemorizationItem } from "@/app/actions/items";
+import type { MemorizationItem } from "@/lib/api";
 import {
   ChevronDown,
   ChevronRight,
